@@ -10,6 +10,8 @@ public class Sistema implements IObligatorio {
     private ListaSalaDE salas;
     private ListaEventoSE eventos;
     private ListaClienteSE clientes;
+    private ListaEntradaSE entradas;
+    
     
     public Sistema(){
         this.salas = new ListaSalaDE();
@@ -104,22 +106,201 @@ public class Sistema implements IObligatorio {
 
     @Override
     public Retorno comprarEntrada(String cedula, String codigoEvento) {
-        return Retorno.noImplementada();
+        Cliente clienteBuscado = null;
+        // Buscar el cliente
+        for (int i = 0; i < clientes.longitud(); i++) {
+            Cliente c = (Cliente) clientes.obtener(i);
+            if(c.getCedula().equals(cedula)){
+                clienteBuscado = c;
+                break;
+            }
+        }
+        // Si no existe el cliente
+        if(clienteBuscado == null){
+            return Retorno.error1();
+        }
+        
+        Evento eventoBuscado = null;
+        //Buscar evento
+        for(int i = 0; i < eventos.longitud(); i++){
+            Evento e = (Evento) eventos.obtener(i);
+            if(e.getCodigo().equals(codigoEvento)){
+                eventoBuscado = e;
+                break;
+            }
+        }
+        // Si no existe el evento
+        if(eventoBuscado == null){
+            return Retorno.error2();
+        }
+        
+        // Comprar la entrada o asignar a la cola de espera
+        if(eventoBuscado.getEntradasDisponibles() > 0){
+            int numeroEntrada = eventoBuscado.getEntradasVendidas() + 1;
+            Entrada entrada = new Entrada(eventoBuscado, clienteBuscado, LocalDate.now(), numeroEntrada);
+            // Modificar entradas del evento
+            eventoBuscado.setEntradasDisponiobles(eventoBuscado.getEntradasDisponibles() - 1);
+            eventoBuscado.setEntradasVenididas(eventoBuscado.getEntradasVendidas() + 1);
+            //Agregar entrada a la lista de entradas de sistema
+            entradas.adicionarFinal(entrada);
+            
+            return Retorno.ok();
+        }
+        else{
+            eventoBuscado.getClientesEnEspera().encolar(clienteBuscado);
+            return Retorno.ok();
+        }
+        
     }
 
     @Override
     public Retorno eliminarEvento(String codigo) {
-        return Retorno.noImplementada();
+        Evento eventoBuscado = null;
+        int pos = -1;
+        
+        // Buscar evento y su posicion en la lista
+        for (int i = 0; i < eventos.longitud(); i++) {
+            Evento e = (Evento) eventos.obtener(i);
+            if(e.getCodigo().equals(codigo)){
+                eventoBuscado = e;
+                pos = i;
+                break;
+            }
+        }
+        
+        // Si no existe el evento
+        if(eventoBuscado == null){
+            return Retorno.error1();
+        }
+        
+        // Si ya tiene entradas vendidad
+        if(eventoBuscado.getEntradasVendidas() > 0){
+            return Retorno.error2();
+        }
+        
+        //Liberar sala
+        //eventoBuscado.getSala()
+        
+        // Eliminar evento de la lista en sistema
+        eventos.eliminar(pos);
+        
+        return Retorno.ok();
     }
 
     @Override
     public Retorno devolverEntrada(String cedula, String codigoEvento) {
-        return Retorno.noImplementada();
+        Cliente clienteBuscado = null;
+        // Buscar el cliente
+        for (int i = 0; i < clientes.longitud(); i++) {
+            Cliente c = (Cliente) clientes.obtener(i);
+            if(c.getCedula().equals(cedula)){
+                clienteBuscado = c;
+                break;
+            }
+        }
+        // Si no existe el cliente
+        if(clienteBuscado == null){
+            return Retorno.error1();
+        }
+        
+        Evento eventoBuscado = null;
+        // Buscar evento
+        for(int i = 0; i < eventos.longitud(); i++){
+            Evento e = (Evento) eventos.obtener(i);
+            if(e.getCodigo().equals(codigoEvento)){
+                eventoBuscado = e;
+                break;
+            }
+        }
+        // Si no existe el evento
+        if(eventoBuscado == null){
+            return Retorno.error2();
+        }
+        
+        // Buscar la entrada del cliente y borrarla del sistema
+        Entrada aDevolver = null;
+        for (int i = 0; i < entradas.longitud(); i++) {
+            Entrada e = (Entrada) entradas.obtener(i);
+            if(e.getCliente().getCedula().equals(cedula)){
+                aDevolver = e;
+                entradas.eliminar(i);
+                break;
+            }
+        }
+        
+        //Actualizar contadores del evento
+        eventoBuscado.setEntradasDisponiobles(eventoBuscado.getEntradasDisponibles() + 1);
+        eventoBuscado.setEntradasVenididas(eventoBuscado.getEntradasVendidas() - 1);
+        
+        //Asignar entrada al cliente en espera para ese evento si lo hay
+        if(!eventoBuscado.getClientesEnEspera().estaVacia()){
+            try{
+                Cliente clienteEnEspera = (Cliente) eventoBuscado.getClientesEnEspera().desencolar();
+                int nuevoNumero = eventoBuscado.getEntradasVendidas() + 1;
+                
+                Entrada nuevaEntrada = new Entrada(eventoBuscado, clienteEnEspera, LocalDate.now(), nuevoNumero);
+                
+                entradas.adicionarFinal(nuevaEntrada);
+                //Actualizar contadores del evento
+                eventoBuscado.setEntradasDisponiobles(eventoBuscado.getEntradasDisponibles() - 1);
+                eventoBuscado.setEntradasVenididas(eventoBuscado.getEntradasVendidas() + 1);
+                
+            }catch(Exception ex) {
+                System.out.println("Error al reasignar entrada: " + ex.getMessage());
+            }
+        }
+        return Retorno.ok();
     }
 
     @Override
     public Retorno calificarEvento(String cedula, String codigoEvento, int puntaje, String comentario) {
-        return Retorno.noImplementada();
+        Cliente clienteBuscado = null;
+        // Buscar el cliente
+        for (int i = 0; i < clientes.longitud(); i++) {
+            Cliente c = (Cliente) clientes.obtener(i);
+            if(c.getCedula().equals(cedula)){
+                clienteBuscado = c;
+                break;
+            }
+        }
+        // Si no existe el cliente
+        if(clienteBuscado == null){
+            return Retorno.error1();
+        }
+        
+        Evento eventoBuscado = null;
+        // Buscar evento
+        for(int i = 0; i < eventos.longitud(); i++){
+            Evento e = (Evento) eventos.obtener(i);
+            if(e.getCodigo().equals(codigoEvento)){
+                eventoBuscado = e;
+                break;
+            }
+        }
+        // Si no existe el evento
+        if(eventoBuscado == null){
+            return Retorno.error2();
+        }
+        
+        // Si el puntaje no es valido
+        if(puntaje < 1 || puntaje > 10){
+            return Retorno.error3();
+        }
+        
+        //Si el cliente ya califico el evento
+        ListaCalificacionesSE calificaciones = eventoBuscado.getCalificaciones();
+        for (int i = 0; i < calificaciones.longitud(); i++) {
+            Calificacion c = (Calificacion) calificaciones.obtener(i);
+            if(c.getCliente().getCedula().equals(cedula)){
+                return Retorno.error4();
+            }
+        }
+        
+        // Registrar calificacion
+        Calificacion nueva = new Calificacion(clienteBuscado, puntaje, comentario);
+        eventoBuscado.getCalificaciones().adicionarFinal(nueva);
+        
+        return Retorno.ok();
     }
 
     @Override
@@ -210,13 +391,78 @@ public class Sistema implements IObligatorio {
     }
 
     @Override
-    public Retorno listarClientesDeEvento(String código, int n) {
-        return Retorno.noImplementada();
+    public Retorno listarClientesDeEvento(String codigo, int n) {
+        // Verificar si existe el evento
+        Evento eventoBuscado = null;
+        for (int i = 0; i < eventos.longitud(); i++) {
+            Evento e = (Evento) eventos.obtener(i);
+            if(e.getCodigo().equals(codigo)){
+                eventoBuscado = e;
+                break;
+            }
+        }
+        if(eventoBuscado == null){
+            return Retorno.error1();
+        }
+        
+        // Verificar n
+        if(n < 1){
+            return Retorno.error2();
+        }
+        
+        //Armar lista con clientes del evento
+        ListaClienteSE clientesPorEvento = new ListaClienteSE();
+        for (int i = 0; i < entradas.longitud(); i++) {
+            Entrada e = (Entrada) entradas.obtener(i);
+            if(e.getEvento().getCodigo().equals(codigo)){
+                clientesPorEvento.adicionarFinal(e.getCliente());
+            }
+        }
+        
+        //Listar clientes
+        for (int i = 0; i < clientesPorEvento.longitud(); i++) {
+            Cliente c = (Cliente) clientes.obtener(i);
+            System.out.println("Nombre: " + c.getNombre() + " CI: " + c.getCedula());
+        }
+        return Retorno.ok();
     }
 
     @Override
     public Retorno listarEsperaEvento() {
-        return Retorno.noImplementada();
+        // Lista de eventos con lista de espera
+        ListaEventoSE eventosConEspera = new ListaEventoSE();
+        for (int i = 0; i < eventos.longitud(); i++) {
+            Evento e = (Evento) eventos.obtener(i);
+            if(!e.getClientesEnEspera().estaVacia()){
+                eventosConEspera.adicionarFinal(e);
+            }
+        }
+        
+        //Ordenar eventos por codigo
+        eventosConEspera.ordenarLista();
+        
+        // Lista de clientes de esos eventos
+        for (int i = 0; i < eventosConEspera.longitud(); i++) {
+            Evento e = (Evento) eventosConEspera.obtener(i);
+            ColaClienteSE colaOriginal = e.getClientesEnEspera();
+            
+            ListaClienteSE clientesEnEspera = new ListaClienteSE();
+            NodoSE actual = (NodoSE) colaOriginal.getFrente();
+            while (actual != null) {
+                Cliente cliente = (Cliente) actual.getDato();
+                clientesEnEspera.adicionarFinal(cliente);
+                actual = actual.getSiguiente();
+            }
+            //Ordenar los clientes por cedula
+            clientesEnEspera.ordenarLista();
+            
+            //Listar los clientes
+            for (int j = 0; j < clientesEnEspera.longitud(); j++) {
+                Cliente c = (Cliente) clientesEnEspera.obtener(j);
+                System.out.println("Nombre: " + c.getNombre() + " CI: " + c.getCedula());
+            }
+        }
+        return Retorno.ok();
     }
 
     @Override

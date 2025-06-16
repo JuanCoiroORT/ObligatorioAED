@@ -1,7 +1,8 @@
-
 package dominio;
 
 import java.time.LocalDate;
+import tads.ColaClienteSE;
+import tads.ListaCalificacionesSE;
 
 public class Evento implements Comparable<Evento>{
     private String codigo;
@@ -11,8 +12,13 @@ public class Evento implements Comparable<Evento>{
     private Sala sala;
     private int entradasDisponibles;
     private int entradasVendidas;
+    private ColaClienteSE clientesEnEspera;
+    private ListaCalificacionesSE listaCalificaciones;
     
-    public Evento(String codigo, String descripcion, int aforoNecesario, LocalDate fecha, Sala sala, int entradasDisponibles, int entradasVendidas){
+    public Evento(String codigo, String descripcion, int aforoNecesario,
+            LocalDate fecha, Sala sala, int entradasDisponibles,
+            int entradasVendidas)
+    {
         this.codigo = codigo;
         this.descripcion = descripcion;
         this.aforoNecesario = aforoNecesario;
@@ -20,6 +26,8 @@ public class Evento implements Comparable<Evento>{
         this.sala = sala;
         this.entradasDisponibles = entradasDisponibles;
         this.entradasVendidas = entradasVendidas;
+        this.clientesEnEspera = new ColaClienteSE();
+        this.listaCalificaciones = new ListaCalificacionesSE();
     }
     
     // Getters
@@ -43,6 +51,12 @@ public class Evento implements Comparable<Evento>{
     }
     public int getEntradasVendidas(){
         return entradasVendidas;
+    }
+    public ColaClienteSE getClientesEnEspera(){
+        return clientesEnEspera;
+    }
+    public ListaCalificacionesSE getCalificaciones(){
+        return listaCalificaciones;
     }
     
     // Setters

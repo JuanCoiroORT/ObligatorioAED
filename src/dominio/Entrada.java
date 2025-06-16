@@ -3,14 +3,14 @@ package dominio;
 
 import java.time.LocalDate;
 
-public class Entrada {
+public class Entrada implements Comparable<Entrada>{
     private Evento evento;
     private Cliente cliente;
     private LocalDate fechaCompra;
-    private String numeroEntrada;
+    private int numeroEntrada;
     private String estado;
 
-    public Entrada(Evento evento, Cliente cliente, LocalDate fechaCompra, String numeroEntrada, String estado) {
+    public Entrada(Evento evento, Cliente cliente, LocalDate fechaCompra, int numeroEntrada) {
         this.evento = evento;
         this.cliente = cliente;
         this.fechaCompra = fechaCompra;
@@ -30,7 +30,7 @@ public class Entrada {
         return fechaCompra;
     }
 
-    public String getNumeroEntrada() {
+    public int getNumeroEntrada() {
         return numeroEntrada;
     }
 
@@ -50,11 +50,16 @@ public class Entrada {
         this.fechaCompra = fechaCompra;
     }
 
-    public void setNumeroEntrada(String numeroEntrada) {
+    public void setNumeroEntrada(int numeroEntrada) {
         this.numeroEntrada = numeroEntrada;
     }
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    @Override
+    public int compareTo(Entrada o) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 }

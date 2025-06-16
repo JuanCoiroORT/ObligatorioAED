@@ -35,7 +35,7 @@ public class IObligatorioTest {
         Retorno r = miSistema.registrarSala("Sala Principal", 600);
         assertEquals(Retorno.ok().resultado, r.resultado);
     }
-    
+//    
     @Test
     public void testRegistrarSalaError1(){
         Retorno r = miSistema.registrarSala("Sala Principal", 600);
@@ -58,7 +58,7 @@ public class IObligatorioTest {
          Retorno r = miSistema.eliminarSala("Sala niños");
          assertEquals(Retorno.ok().resultado, r.resultado);
     }
-    
+//    
      @Test
     public void testEliminarSalaError1() {
          Retorno r = miSistema.eliminarSala("Sala que no existe");
@@ -74,7 +74,6 @@ public class IObligatorioTest {
         Retorno r = miSistema.registrarEvento("E110", "Nuevo evento", 200, fecha);
         assertEquals(Retorno.ok().resultado, r.resultado);
     }
-    
     //Si ya existe un evento con el mismo codigo
     @Test
     public void testRegistrarEventoError1() {
@@ -86,7 +85,7 @@ public class IObligatorioTest {
         Retorno r =  miSistema.registrarEvento("E110", "Nuevo evento", 200, fecha);
         assertEquals(Retorno.error1().resultado, r.resultado);
     }
-    
+//    
     //El aforo necesario es menor o igual a 0
     @Test
     public void testRegistrarEventoError2() {
@@ -97,8 +96,8 @@ public class IObligatorioTest {
         Retorno r =  miSistema.registrarEvento("E110", "Nuevo evento", -11, fecha);
         assertEquals(Retorno.error2().resultado, r.resultado);
     }
-    
-    // No hay salas von aforo suficiente para esa fecha
+//    
+//    // No hay salas von aforo suficiente para esa fecha
     @Test
     public void testRegistrarEventoError3() {
         //Crear sala con la capacidad requerida
@@ -109,13 +108,13 @@ public class IObligatorioTest {
         Retorno r =  miSistema.registrarEvento("E110", "Nuevo evento", 300, fecha);
         assertEquals(Retorno.error3().resultado, r.resultado);
     }
-
+//
     @Test
     public void testRegistrarClienteOk() {
         Retorno r = miSistema.registrarCliente("49957002", "Juan Coiro");
         assertEquals(Retorno.ok().resultado, r.resultado);
     }
-    
+//    
     //Cedula con formato invalido
     @Test
     public void testRegistrarClienteError1() {
@@ -130,7 +129,7 @@ public class IObligatorioTest {
         Retorno r = miSistema.registrarCliente("49957002", "Juan Coiro");
         assertEquals(Retorno.error2().resultado, r.resultado);
     }
-
+//
     @Test
     public void testListarSalas() {
         miSistema.registrarSala("Sala Principal", 600);
