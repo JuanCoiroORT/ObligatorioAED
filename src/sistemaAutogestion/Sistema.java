@@ -10,7 +10,7 @@ public class Sistema implements IObligatorio {
     private ListaSalaDE salas;
     private ListaEventoSE eventos;
     private ListaClienteSE clientes;
-    private ListaEntradaSE entradas;
+    private PilaEntradaSE entradas;
     
     
     public Sistema(){
@@ -141,8 +141,9 @@ public class Sistema implements IObligatorio {
             // Modificar entradas del evento
             eventoBuscado.setEntradasDisponiobles(eventoBuscado.getEntradasDisponibles() - 1);
             eventoBuscado.setEntradasVenididas(eventoBuscado.getEntradasVendidas() + 1);
-            //Agregar entrada a la lista de entradas de sistema
-            entradas.adicionarFinal(entrada);
+            
+            //Apilar entrada
+            entradas.apilar(entrada);
             
             return Retorno.ok();
         }
@@ -217,38 +218,50 @@ public class Sistema implements IObligatorio {
             return Retorno.error2();
         }
         
-        // Buscar la entrada del cliente y borrarla del sistema
-        Entrada aDevolver = null;
-        for (int i = 0; i < entradas.longitud(); i++) {
-            Entrada e = (Entrada) entradas.obtener(i);
-            if(e.getCliente().getCedula().equals(cedula)){
-                aDevolver = e;
-                entradas.eliminar(i);
-                break;
+        // Buscar la entrada y pasarla a estado="devuelta"
+        PilaEntradaSE aux = new PilaEntradaSE();
+        boolean encontrado = false;
+        
+        while(!entradas.estaVacia()){
+            Entrada e = (Entrada) entradas.desapilar();
+            
+            if(!encontrado &&
+                e.getCliente().getCedula().equals(cedula) &&
+                e.getEvento().getCodigo().equals(codigoEvento) &&
+                !e.getEstado().equals("devuelta")){
+                
+                e.setEstado("devuelta");
+                encontrado = true;
+                
+                //Actualizar contadores
+                eventoBuscado.setEntradasDisponiobles(eventoBuscado.getEntradasDisponibles() + 1);
+                eventoBuscado.setEntradasVenididas(eventoBuscado.getEntradasVendidas() - 1);
             }
+            
+            aux.apilar(e);
         }
         
-        //Actualizar contadores del evento
-        eventoBuscado.setEntradasDisponiobles(eventoBuscado.getEntradasDisponibles() + 1);
-        eventoBuscado.setEntradasVenididas(eventoBuscado.getEntradasVendidas() - 1);
+        //Restaurar pila original
+        while(!aux.estaVacia()){
+            entradas.apilar(aux.desapilar());
+        }
         
-        //Asignar entrada al cliente en espera para ese evento si lo hay
+        // Asignar entrada a cliente en cola de espera
         if(!eventoBuscado.getClientesEnEspera().estaVacia()){
             try{
-                Cliente clienteEnEspera = (Cliente) eventoBuscado.getClientesEnEspera().desencolar();
+                Cliente c = (Cliente) eventoBuscado.getClientesEnEspera().desencolar();
                 int nuevoNumero = eventoBuscado.getEntradasVendidas() + 1;
+                Entrada nuevaEntrada = new Entrada(eventoBuscado, c, LocalDate.now(), nuevoNumero);
+                entradas.apilar(nuevaEntrada);
                 
-                Entrada nuevaEntrada = new Entrada(eventoBuscado, clienteEnEspera, LocalDate.now(), nuevoNumero);
-                
-                entradas.adicionarFinal(nuevaEntrada);
-                //Actualizar contadores del evento
+                 //Actualizar contadores
                 eventoBuscado.setEntradasDisponiobles(eventoBuscado.getEntradasDisponibles() - 1);
                 eventoBuscado.setEntradasVenididas(eventoBuscado.getEntradasVendidas() + 1);
-                
-            }catch(Exception ex) {
+            }catch(Exception ex){
                 System.out.println("Error al reasignar entrada: " + ex.getMessage());
             }
         }
+       
         return Retorno.ok();
     }
 
@@ -410,18 +423,29 @@ public class Sistema implements IObligatorio {
             return Retorno.error2();
         }
         
-        //Armar lista con clientes del evento
+        //Crear pila auxiliar para recorrer sin perder contenido
+        PilaEntradaSE aux = new PilaEntradaSE();
         ListaClienteSE clientesPorEvento = new ListaClienteSE();
-        for (int i = 0; i < entradas.longitud(); i++) {
-            Entrada e = (Entrada) entradas.obtener(i);
-            if(e.getEvento().getCodigo().equals(codigo)){
-                clientesPorEvento.adicionarFinal(e.getCliente());
+        
+        int cantidad = 0;
+        while(!entradas.estaVacia() && cantidad < n){
+            Entrada entrada = (Entrada) entradas.desapilar();
+            
+            if(entrada.getEvento().getCodigo().equals(codigo)){
+                clientesPorEvento.adicionarFinal(entrada.getCliente());
+                cantidad++;
             }
+            aux.apilar(entrada);
+        }
+        
+        //Restaurar pila original
+        while(!aux.estaVacia()){
+            entradas.apilar(aux.desapilar());
         }
         
         //Listar clientes
         for (int i = 0; i < clientesPorEvento.longitud(); i++) {
-            Cliente c = (Cliente) clientes.obtener(i);
+            Cliente c = (Cliente) clientesPorEvento.obtener(i);
             System.out.println("Nombre: " + c.getNombre() + " CI: " + c.getCedula());
         }
         return Retorno.ok();
@@ -467,22 +491,202 @@ public class Sistema implements IObligatorio {
 
     @Override
     public Retorno deshacerUtimasCompras(int n) {
-        return Retorno.noImplementada();
+        if(n <= 0 || n > entradas.cantidadNodos()){
+            return Retorno.error1();
+        }
+        
+        PilaEntradaSE aux = new PilaEntradaSE();
+        ListaEntradaSE entradasDesechas = new ListaEntradaSE();
+        
+        // Sacar ultimas n entradas y almacenarlas
+        for (int i = 0; i < n; i++) {
+            Entrada e = (Entrada) entradas.desapilar();
+            
+            //Marcar como devuelta
+            e.setEstado("devuelta");
+            
+            //Actualizar contadores
+            Evento evento = (Evento) e.getEvento();
+            evento.setEntradasDisponiobles(evento.getEntradasDisponibles() + 1);
+            evento.setEntradasVenididas(evento.getEntradasVendidas() - 1);
+            
+            //Guardar en lista para imprimir en pantalla
+            entradasDesechas.adicionarFinal(e);
+            
+            // Guardar en la pila auxiliar para restaurar
+            aux.apilar(e);
+        }
+        
+        // Restaurar la pila original con las entradas devueltas en el tope
+        while(aux.estaVacia()){
+            entradas.apilar(aux.desapilar());
+        }
+        
+        //Ordenal lista a imprimir
+        entradasDesechas.ordenarLista();
+        
+        //Imprimir
+        System.out.println("Lista de entradas eliminadas:");
+        for (int i = 0; i < entradasDesechas.longitud(); i++) {
+            Entrada e = (Entrada) entradasDesechas.obtener(i);
+            System.out.println("Codigo del evento: " + e.getEvento().getCodigo()
+                                + " CI: " + e.getCliente().getCedula());
+        }
+        
+        return Retorno.ok();
     }
 
     @Override
     public Retorno eventoMejorPuntuado() {
-        return Retorno.noImplementada();
+
+        ListaEventoSE eventosConPromedio = new ListaEventoSE();
+        double mejorPromedio = -1;
+        
+        ListaEventoSE mejoresEventos = new ListaEventoSE();
+        
+        for (int i = 0; i < eventos.longitud(); i++) {
+            double suma = 0;
+            int cantidad = 0;
+            Evento e = (Evento) eventos.obtener(i);
+            
+            ListaCalificacionesSE calificaciones = e.getCalificaciones();
+            for (int j = 0; j < calificaciones.longitud(); j++) {
+                Calificacion c = (Calificacion) calificaciones.obtener(j);
+                suma += c.getPuntaje();
+                cantidad++;
+            }
+            
+            if(cantidad > 0){
+                double promedio = suma / cantidad;
+                
+                
+                if(promedio > mejorPromedio){
+                    mejorPromedio = promedio;
+                    mejoresEventos = new ListaEventoSE();
+                    
+                    mejoresEventos.adicionarFinal(e);
+                } else if(promedio == mejorPromedio){
+                    mejoresEventos.adicionarFinal(e);
+                }
+            }
+        }
+        // Si no hay eventos o los eventos no tienen calificaciones
+        if(mejoresEventos.vacia()){
+            System.out.println("No hubo eventos con calificaciones.");
+        }
+        
+        // Si hay mas de un evento con el mejor promedio se ordena
+        if(mejoresEventos.longitud() > 1){
+            mejoresEventos.ordenarLista();
+        }
+        
+        System.out.println("Evento mejor puntuado.");
+        for (int i = 0; i < mejoresEventos.longitud(); i++) {
+            Evento e = (Evento) mejoresEventos.obtener(i);
+            System.out.println("Codigo del evento: " + e.getCodigo()
+            + " Promedio: " + mejorPromedio);
+        }
+        return Retorno.ok();
     }
 
     @Override
     public Retorno comprasDeCliente(String cedula) {
-        return Retorno.noImplementada();
+        Cliente clienteBuscado = null;
+        for (int i = 0; i < clientes.longitud(); i++) {
+            Cliente c = (Cliente) clientes.obtener(i);
+            if(c.getCedula().equals(cedula)){
+                clienteBuscado = c;
+                break;
+            }
+        }
+        if(clienteBuscado == null){
+            return Retorno.error1();
+        }
+        //Recorrer pila sin perder datos
+        PilaEntradaSE aux = new PilaEntradaSE();
+        PilaEntradaSE reverso = new PilaEntradaSE();
+        
+        // Pasar todo a reverso para mantener orden original
+        while(!entradas.estaVacia()){
+            Entrada entrada = (Entrada) entradas.desapilar();
+            reverso.apilar(entrada);
+        }
+        
+        //Procesar desde la mas antigua
+        while(!reverso.estaVacia()){
+            Entrada entrada = (Entrada) reverso.desapilar();
+            
+            if(entrada.getCliente().getCedula().equals(cedula)){
+                String letraEstado = entrada.getEstado().equalsIgnoreCase("activa") ? "N" : "D";
+                System.out.println(entrada.getEvento().getCodigo() + " - " + letraEstado);
+            }
+            //Restaurar en aux
+            aux.apilar(entrada);
+        }
+        
+        //Restaurar original
+        while(!aux.estaVacia()){
+            entradas.apilar(aux.desapilar());
+        }
+        return Retorno.ok();
     }
 
     @Override
     public Retorno comprasXDia(int mes) {
-        return Retorno.noImplementada();
+        if(mes < 1 || mes > 12){
+            return Retorno.error1();
+        }
+        
+        ListaSE<Integer> dias = new ListaSE<>();
+        ListaSE<Integer> cantidades = new ListaSE<>();
+        
+        PilaEntradaSE aux = new PilaEntradaSE();
+        PilaEntradaSE reverso = new PilaEntradaSE();
+        
+        //Invertir pila original para procesar mas antigua
+        while(!entradas.estaVacia()){
+            Entrada e = (Entrada) entradas.desapilar();
+            reverso.apilar(e);
+        }
+        
+        //Procesar entradas
+        while(!reverso.estaVacia()){
+            Entrada e = (Entrada) reverso.desapilar();
+            LocalDate fecha = e.getFechaCompra();
+            
+            if(fecha.getMonthValue() == mes){
+                int dia = fecha.getDayOfMonth();
+                boolean encontrado = false;
+                
+                for (int i = 0; i < dias.longitud(); i++) {
+                    if(dias.obtener(i) == dia){
+                        int nuevaCantidad = cantidades.obtener(i) + 1;
+                        cantidades.eliminar(i);
+                        cantidades.insertar(i, nuevaCantidad);
+                        encontrado = true;
+                        break;
+                    }
+                }
+                if(!encontrado){
+                    dias.adicionarFinal(dia);
+                    cantidades.adicionarFinal(1);
+                }
+            }
+            
+            aux.apilar(e);
+        }
+        // Restaurar pila original
+        while(!aux.estaVacia()){
+            entradas.apilar(aux.desapilar());
+        }
+        
+        //Mostrar resultados
+        for (int i = 0; i < dias.longitud(); i++) {
+            System.out.println("Dia: " + dias.obtener(i) + 
+                               " - Compras: " + cantidades.obtener(i));
+        }
+       
+        return Retorno.ok();
     }
 
 }

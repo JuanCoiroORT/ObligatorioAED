@@ -60,6 +60,10 @@ public class Entrada implements Comparable<Entrada>{
 
     @Override
     public int compareTo(Entrada o) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        int cmp = this.evento.getCodigo().compareTo(o.evento.getCodigo());
+        if(cmp != 0){
+            return cmp;
+        }
+        return this.cliente.getCedula().compareTo(o.cliente.getCedula());
     }
 }
